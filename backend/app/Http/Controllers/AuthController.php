@@ -43,4 +43,16 @@ class AuthController extends Controller
                 'token' => $user->createToken('api')->plainTextToken,
             ]);
     }
+
+    public function logout(Request $request)
+    {
+        $request->user()->currentAccessToken()->delete();
+
+        return response()-> noContent();
+    }
+
+    public function me(Request $request){
+        return $request->user();
+    }
+
 }
