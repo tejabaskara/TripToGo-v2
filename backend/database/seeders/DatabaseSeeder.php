@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Place;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -20,6 +21,10 @@ class DatabaseSeeder extends Seeder
         User::factory()->create([
             'name' => 'Test User',
             'email' => 'test@example.com',
+            'password' => 'password',
+            'is_admin'=> true,
         ]);
+
+        Place::factory(10)->create();
     }
 }
