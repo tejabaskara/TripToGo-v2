@@ -1,12 +1,15 @@
 <template>
  <nav>
-    <h1>Triptogo</h1>
     <RouterLink to="/">
-        <a>
-            test
-        </a>
+        Triptogo
     </RouterLink>
-    <RouterView />
- </nav>
+    <RouterLink to="/login">
+        Login
+    </RouterLink>
+    <RouterLink to="/register">
+        Register
+    </RouterLink>
 
+ </nav>
+ <RouterView />
 </template>
