@@ -1,7 +1,12 @@
-<script setup>
-import HelloWorld from './components/HelloWorld.vue'
-</script>
-
 <template>
-  <HelloWorld />
+ <nav>
+    <h1>Triptogo</h1>
+    <RouterLink to="/">
+        <a>
+            test
+        </a>
+    </RouterLink>
+    <RouterView />
+ </nav>
+
 </template>
