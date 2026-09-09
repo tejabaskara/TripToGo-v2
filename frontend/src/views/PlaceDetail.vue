@@ -6,12 +6,14 @@
   import icon from 'leaflet/dist/images/marker-icon.png'
   import iconShadow from 'leaflet/dist/images/marker-shadow.png'
   import { useRoute } from 'vue-router'
+  import { useAuth } from '../composables/useAuth'
 
+
+const { isLoggedIn } = useAuth()
   const route = useRoute()
 
   const mapEl = ref(null)
   let map
-  let marker
 
   L.Marker.prototype.options.icon = L.icon({
     iconUrl: icon,
@@ -23,6 +25,11 @@
   const loading = ref(true)
   const error = ref(null)
   const id = route.params.id
+  const rating = ref(5)
+  const comment = ref('')
+  const formError = ref({})
+  const submmiting = ref(false)
+
 
   async function fetchDetailPlace() {
     loading.value = true
@@ -34,6 +41,24 @@
       error.value = 'Could not reach the server.'
     } finally {
       loading.value = false
+    }
+  }
+
+  async function submitReview() {
+    submmiting.value = true
+    formError.value = {}
+    try {
+      const res = await api.post(`/places/${id}/reviews`, {
+        rating: rating.value,
+        comment: comment.value,
+      })
+      place.value.reviews.unshift(res.data)
+      place.value.reviews_count++
+      comment.value = ''
+    } catch (e) {
+      formError.value = e.response?.data?.errors ?? {}
+    } finally {
+      submmiting.value=false
     }
   }
 
@@ -58,11 +83,38 @@
     </div>
     <div v-else-if="place">
         <h1>{{ place.name }}</h1>
-        <br>
-        <h2>{{ place.address}}</h2>
+        <p>{{ place.address}}</p>
+        <p>{{ place.category}}</p>
+        <hr>
         <p>{{ place.description }}</p>
+        <p>
+          {{ place.reviews_avg_rating ? Number(place.reviews_avg_rating).toFixed(1) : 'No ratings' }}
+          ({{ place.reviews_count }} reviews)
+        </p>
+        <img v-if="place.image" :src="place.image" :alt="place.name" class="w-50 h-64 object-cover">
         <div ref="mapEl" class="h-96"></div>
         <br>
-
+        <ul>
+          <li v-for="r in place.reviews" :key="r.id">
+            <strong>{{ r.user.name }}</strong> — {{ r.rating }}/5
+            <p>{{ r.comment }}</p>
+            <small>{{ r.created_at }}</small>
+          </li>
+        </ul>
+        <hr>
+        <br>
+        <form v-if="isLoggedIn" @submit.prevent="submitReview">
+            <select v-model="rating">
+                <option v-for="n in 5" :key="n" :value="n">{{ n }}</option>
+            </select>
+            <textarea v-model="comment" placeholder="Your review"></textarea>
+            <p v-if="formError.comment">{{ formError.comment[0] }}</p>
+            <p v-if="formError.rating">{{ formError.rating[0] }}</p>
+            <button :disabled="submmiting">Post Review</button>
+        </form>
+        <p v-else>
+            <RouterLink to="/login">Login</RouterLink> to leave review
+        </p>
     </div>
+
 </template>
