@@ -1,61 +1,61 @@
 <script setup>
-  import { ref, onMounted, watch } from 'vue'
-  import api from '../api'
-  import L from 'leaflet'
-  import 'leaflet/dist/leaflet.css'
-  import icon from 'leaflet/dist/images/marker-icon.png'
-  import iconShadow from 'leaflet/dist/images/marker-shadow.png'
+import { ref, onMounted, watch } from 'vue'
+import api from '../api'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
+import icon from 'leaflet/dist/images/marker-icon.png'
+import iconShadow from 'leaflet/dist/images/marker-shadow.png'
 
-  const mapEl = ref(null)
-  let map
-  let markers = []
+const mapEl = ref(null)
+let map
+let markers = []
 
-  L.Marker.prototype.options.icon = L.icon({
-    iconUrl: icon,
-    shadowUrl: iconShadow,
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-  })
-  const places = ref([])
-  const loading = ref(true)
-  const error = ref(null)
-  const search = ref('')
-  const category = ref('')
+L.Marker.prototype.options.icon = L.icon({
+  iconUrl: icon,
+  shadowUrl: iconShadow,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+})
+const places = ref([])
+const loading = ref(true)
+const error = ref(null)
+const search = ref('')
+const category = ref('')
 
-  async function fetchPlaces() {
-    loading.value = true
-    error.value = null
-    try {
-      const res = await api.get('/places', {
-        params: { search: search.value, category: category.value }
+async function fetchPlaces() {
+  loading.value = true
+  error.value = null
+  try {
+    const res = await api.get('/places', {
+      params: { search: search.value, category: category.value }
     })
     places.value = res.data.data
-    } catch (e) {
-      error.value = 'Could not reach the server.'
-    } finally {
-      loading.value = false
-    }
+  } catch (e) {
+    error.value = 'Could not reach the server.'
+  } finally {
+    loading.value = false
   }
+}
 
-  function updateMarkers() {
-    markers.forEach(m => map.removeLayer(m))
-    markers = places.value.map(p =>
-       L.marker([p.latitude, p.longitude])
-          .addTo(map)
-          .bindPopup(`<b>${p.name}</b><br>${p.reviews_avg_rating ?? 'No ratings'}<br><a href="/places/${p.id}">View</a>`)
-      )
-  }
+function updateMarkers() {
+  markers.forEach(m => map.removeLayer(m))
+  markers = places.value.map(p =>
+    L.marker([p.latitude, p.longitude])
+        .addTo(map)
+        .bindPopup(`<b>${p.name}</b><br>${p.reviews_avg_rating ?? 'No ratings'}<br><a href="/places/${p.id}">View</a>`)
+    )
+}
 
-  onMounted(() => {
-    fetchPlaces()
-    map = L.map(mapEl.value).setView([-6.2, 106.8], 10)
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(map)
-  })
+onMounted(() => {
+  fetchPlaces()
+  map = L.map(mapEl.value).setView([-6.2, 106.8], 10)
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map)
+})
 
-    watch([search, category], fetchPlaces)
-    watch(places, updateMarkers)
+watch([search, category], fetchPlaces)
+watch(places, updateMarkers)
 
 </script>
 
