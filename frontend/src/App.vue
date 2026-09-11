@@ -14,7 +14,7 @@ async function handleLogout() {
 
 onMounted(() => {
   if (isLoggedIn.value) {
-    fetchUser().catch(()=>logout)
+    fetchUser().catch(()=>logout())
   }
 })
 
@@ -27,7 +27,7 @@ onMounted(() => {
     </RouterLink>
     <template v-if="isLoggedIn">
         <span>{{ user?.name }}</span>
-        <RouterLink v-if="isAdmin">Admin</RouterLink>
+        <RouterLink v-if="isAdmin" to="/admin/places">Admin</RouterLink>
         <button @click="handleLogout">Logout</button>
     </template>
     <template v-else>
