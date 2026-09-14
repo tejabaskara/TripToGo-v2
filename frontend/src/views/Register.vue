@@ -19,7 +19,11 @@ async function submit() {
     await register(name.value, email.value, password.value)
     router.push('/')
   } catch (e) {
-    formError.value = e.response?.data?.errors ?? {}
+    if (e.response) {
+        formError.value = e.response?.data?.errors ?? {}
+    } else {
+        error.value = 'Could not reach the server'
+    }
   } finally {
     submitting.value = false
   }
