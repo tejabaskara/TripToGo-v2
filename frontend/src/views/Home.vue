@@ -21,6 +21,8 @@ const loading = ref(true)
 const error = ref(null)
 const search = ref('')
 const category = ref('')
+let timer
+
 
 async function fetchPlaces() {
   loading.value = true
@@ -54,7 +56,12 @@ onMounted(() => {
   }).addTo(map)
 })
 
-watch([search, category], fetchPlaces)
+
+
+watch([search, category], () => {
+  clearTimeout(timer)
+  timer = setTimeout(fetchPlaces, 300)
+})
 watch(places, updateMarkers)
 
 </script>

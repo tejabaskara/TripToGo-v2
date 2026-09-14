@@ -23,6 +23,7 @@ const category = ref('')
 const search = ref('')
 const loading = ref(true)
 const error = ref(null)
+let timer
 
 async function fetchPlaces() {
   loading.value = true
@@ -71,7 +72,10 @@ onMounted(() => {
   }).addTo(map)
 })
 
-watch([search, category], fetchPlaces)
+watch([search, category], () => {
+  clearTimeout(timer)
+  timer= setTimeout(fetchPlaces, 300)
+})
 watch(places, updateMarkers)
 
 </script>
@@ -95,6 +99,6 @@ watch(places, updateMarkers)
             </li>
         </ul>
     </div>
-    <div ref="mapEl" class="h-95"></div>
+    <div ref="mapEl" class="h-96"></div>
 
 </template>

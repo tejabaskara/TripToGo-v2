@@ -54,7 +54,10 @@ const { isLoggedIn } = useAuth()
       })
       place.value.reviews.unshift(res.data)
       place.value.reviews_count++
+      const total = place.value.reviews.reduce((sum, r) => sum + r.rating, 0)
+      place.value.reviews_avg_rating = total / place.value.reviews_count
       comment.value = ''
+
     } catch (e) {
       formError.value = e.response?.data?.errors ?? {}
     } finally {
