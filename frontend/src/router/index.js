@@ -5,8 +5,8 @@ const history = createWebHistory()
 
 const routes = [
   { path: '/', name: 'home', component: () => import('../views/Home.vue') },
-  { path: '/login', name: 'login', component: () => import('../views/Login.vue') },
-  { path: '/register', name: 'register', component: () => import('../views/Register.vue') },
+  { path: '/login', name: 'login', meta: {hideNav: true}, component: () => import('../views/Login.vue') },
+  { path: '/register', name: 'register', meta : {hideNav: true}, component: () => import('../views/Register.vue') },
   { path: '/places/:id', name: 'placeDetail', component: () => import('../views/PlaceDetail.vue') },
   { path: '/admin/places', name: 'adminPlaces', meta: {admin: true} , component: () => import('../views/AdminPlaces.vue') },
   { path: '/admin/places/create', name: 'adminPlaceCreate', meta:{admin: true},component: ()=> import ('../views/AdminPlaceForm.vue') },

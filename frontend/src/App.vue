@@ -1,8 +1,9 @@
 <script setup>
 import { onMounted } from 'vue'
 import { useAuth } from './composables/useAuth'
-import { useRouter } from 'vue-router'
+import {useRoute, useRouter } from 'vue-router'
 
+const route = useRoute()
 const router = useRouter()
 const { isLoggedIn, fetchUser, user, isAdmin, logout } = useAuth()
 
@@ -21,7 +22,7 @@ onMounted(() => {
 </script>
 
 <template>
- <nav>
+ <nav v-if="!route.meta.hideNav">
     <RouterLink to="/">
         Triptogo
     </RouterLink>
