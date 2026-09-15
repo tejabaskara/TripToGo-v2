@@ -1,11 +1,9 @@
 <script setup>
-import { onMounted, watch, ref } from 'vue'
+import { onMounted, watch, ref, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '../api'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import icon from 'leaflet/dist/images/marker-icon.png'
-import iconShadow from 'leaflet/dist/images/marker-shadow.png'
 
 const router = useRouter()
 const route = useRoute()
@@ -28,12 +26,6 @@ const loading = ref(true)
 const mapEl = ref(null)
 let map
 let marker
-L.Marker.prototype.options.icon = L.icon({
-  iconUrl: icon,
-  shadowUrl: iconShadow,
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-})
 
 async function fetchPlace() {
   try {
@@ -92,15 +84,18 @@ onMounted(async () => {
   } else {
     loading.value = false
   }
+
+  await nextTick()
+
   map = L.map(mapEl.value).setView(
-    isEdit ? [latitude.value, longitude.value] : [-6.2, 106.8],
-    isEdit ? 14 : 10
+    isEdit && latitude.value !== ''  ? [latitude.value, longitude.value] : [-6.2, 106.8],
+    isEdit && latitude.value !== '' ? 14 : 10
   )
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors'
   }).addTo(map)
 
-  if (isEdit) {
+  if (isEdit && latitude.value !== '') {
     marker = L.marker([latitude.value, longitude.value]).addTo(map)
   }
 
@@ -136,14 +131,16 @@ onMounted(async () => {
             <select v-model="category">
                 <option value="">All Category</option>
                 <option value="beach">Beach</option>
+                <option value="mountain">Mountain</option>
+                <option value="museum">Museum</option>
             </select>
             <input v-model="image" placeholder="Image URL">
 
             <input v-model.number="latitude" type="number" step="any" placeholder="Latitude" required>
             <input v-model.number="longitude" type="number" step="any" placeholder="Longitude" required>
             <p v-if="formError.latitude
-            ">{{ formError.latitude }}</p>
-            <p v-if="formError.longitude">{{ formError.longitude }}</p>
+            ">{{ formError.latitude[0] }}</p>
+            <p v-if="formError.longitude">{{ formError.longitude[0] }}</p>
 
             <div ref="mapEl" class="h-96"></div>
 

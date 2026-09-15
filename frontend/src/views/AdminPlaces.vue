@@ -3,20 +3,11 @@ import { onMounted, ref, watch } from 'vue';
 import api from '../api';
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import icon from 'leaflet/dist/images/marker-icon.png'
-import iconShadow from 'leaflet/dist/images/marker-shadow.png'
 
 
 const mapEl = ref(null)
 let map
 let markers = []
-
-L.Marker.prototype.options.icon = L.icon({
-  iconUrl: icon,
-  shadowUrl: iconShadow,
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-})
 
 const places = ref([])
 const category = ref('')
@@ -85,6 +76,8 @@ watch(places, updateMarkers)
     <select v-model="category">
         <option value="">All categories</option>
         <option value="beach">Beach</option>
+        <option value="mountain">Mountain</option>
+        <option value="museum">Museum</option>
     </select>
     <div v-if="loading">Loading...</div>
     <div v-else-if="error">{{ error }}</div>

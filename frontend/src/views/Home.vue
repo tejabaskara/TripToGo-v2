@@ -3,19 +3,12 @@ import { ref, onMounted, watch } from 'vue'
 import api from '../api'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import icon from 'leaflet/dist/images/marker-icon.png'
-import iconShadow from 'leaflet/dist/images/marker-shadow.png'
+import router from '../router'
 
 const mapEl = ref(null)
 let map
 let markers = []
 
-L.Marker.prototype.options.icon = L.icon({
-  iconUrl: icon,
-  shadowUrl: iconShadow,
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-})
 const places = ref([])
 const loading = ref(true)
 const error = ref(null)
@@ -43,8 +36,9 @@ function updateMarkers() {
   markers.forEach(m => map.removeLayer(m))
   markers = places.value.map(p =>
     L.marker([p.latitude, p.longitude])
-        .addTo(map)
-        .bindPopup(`<b>${p.name}</b><br>${p.reviews_avg_rating ?? 'No ratings'}<br><a href="/places/${p.id}">View</a>`)
+      .addTo(map)
+      .bindPopup(`<b>${p.name}</b><br>${p.reviews_avg_rating ?? 'No ratings'}`)
+      .on('click', () => router.push(`/places/${p.id}`))
     )
 }
 
@@ -71,6 +65,8 @@ watch(places, updateMarkers)
     <select v-model="category">
         <option value="">All categories</option>
         <option value="beach">Beach</option>
+        <option value="mountain">Mountain</option>
+        <option value="museum">Museum</option>
     </select>
 
     <div v-if="loading">Loading...</div>

@@ -11,6 +11,7 @@ const email = ref('')
 const password = ref('')
 const formError = ref({})
 const submitting = ref(false)
+const error = ref('')
 
 async function submit() {
   submitting.value = true

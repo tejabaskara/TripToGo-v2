@@ -3,24 +3,16 @@
   import api from '../api'
   import L from 'leaflet'
   import 'leaflet/dist/leaflet.css'
-  import icon from 'leaflet/dist/images/marker-icon.png'
-  import iconShadow from 'leaflet/dist/images/marker-shadow.png'
   import { useRoute } from 'vue-router'
   import { useAuth } from '../composables/useAuth'
 
 
 const { isLoggedIn } = useAuth()
-  const route = useRoute()
+const route = useRoute()
 
   const mapEl = ref(null)
   let map
 
-  L.Marker.prototype.options.icon = L.icon({
-    iconUrl: icon,
-    shadowUrl: iconShadow,
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-  })
   const place = ref()
   const loading = ref(true)
   const error = ref(null)
