@@ -60,6 +60,7 @@ async function submit() {
             </div>
             <p v-if="formError.email" class="text-red-600">{{ formError.email[0] }}</p>
             <p v-if="error" class="text-red-600">{{error}}</p>
+            <RouterLink to="/register" class="text-gray-700 text-right">Don't have account?</RouterLink>
             <button :disabled="submitting" class="bg-green-800 text-white font-bold rounded py-2 disabled:opacity-50">Login</button>
         </form>
     </div>
