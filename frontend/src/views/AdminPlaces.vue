@@ -1,13 +1,6 @@
 <script setup>
 import { onMounted, ref, watch } from 'vue';
 import api from '../api';
-import L from 'leaflet'
-import 'leaflet/dist/leaflet.css'
-
-
-const mapEl = ref(null)
-let map
-let markers = []
 
 const places = ref([])
 const category = ref('')
@@ -45,53 +38,59 @@ async function remove(id) {
   }
 }
 
-function updateMarkers() {
-  markers.forEach(m => map.removeLayer(m))
-  markers = places.value.map(p =>
-    L.marker([p.latitude, p.longitude])
-      .addTo(map)
-      .bindPopup(`<b>${p.name}</b><br>${p.reviews_avg_rating ?? 'No rating'}<br><a href= "/places/${p.id}">View</a>`)
-  )
-}
-
-
 onMounted(() => {
   fetchPlaces()
-  map = L.map(mapEl.value).setView([-6.2, 106.8], 10)
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '&copy; OpenStreetMap contributors'
-  }).addTo(map)
 })
 
 watch([search, category], () => {
   clearTimeout(timer)
   timer= setTimeout(fetchPlaces, 300)
 })
-watch(places, updateMarkers)
+watch(places)
 
 </script>
 <template>
-    <h1>AdminPlaces.vue</h1>
-    <input v-model="search" placeholder="Search.."/>
-    <select v-model="category">
-        <option value="">All categories</option>
-        <option value="beach">Beach</option>
-        <option value="mountain">Mountain</option>
-        <option value="museum">Museum</option>
-    </select>
-    <div v-if="loading">Loading...</div>
-    <div v-else-if="error">{{ error }}</div>
-    <div v-else-if="places.length === 0 ">No places found.</div>
-    <div v-else>
-        <RouterLink to="/admin/places/create">New Place</RouterLink>
-        <ul>
-            <li v-for="p in places" :key="p.id">
-                {{p.name}} - {{p.category}}
-                <RouterLink :to="`/admin/places/${p.id}/edit`">Edit</RouterLink>
-                <button @click="remove(p.id)">Delete</button>
+    <div class="mx-auto p-4 max-w-6xl w-full">
+        <h1 class="font-bold text-center mb-5 text-4xl">Admin Page</h1>
+        <div class="flex flex-col md:flex-row gap-2 mb-5">
+            <input v-model="search" placeholder="Search.." class="border rounded px-3 py-2 flex-1 bg-white"/>
+            <select v-model="category" class="border rounded px-3 py-2 bg-white">
+                <option value="">All categories</option>
+                <option value="beach">Beach</option>
+                <option value="mountain">Mountain</option>
+                <option value="museum">Museum</option>
+            </select>
+        </div>
+
+        <RouterLink to="/admin/places/create" class="inline-block bg-green-600 text-white rounded px-4 py-2 mb-5 hover:bg-green-700">
+            New Place
+        </RouterLink>
+
+        <div v-if="loading">Loading...</div>
+        <div v-else-if="error" class="text-red-600">{{ error }}</div>
+        <div v-else-if="places.length === 0 " class="font-bold">No places found.</div>
+
+        <ul class="flex flex-col gap-2">
+            <li v-for="p in places" :key="p.id" class="border rounded p-3 bg-white flex items-center justify-between">
+                <div>
+                    <div class="font-semibold text-blue-700">
+                        {{p.name}}
+                    </div>
+                    <div class="text-sm text-gray-800">
+                        {{p.category}}
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3 text-white">
+                    <RouterLink :to="`/admin/places/${p.id}/edit`" class="inline-block bg-blue-400 px-3 py-2 rounded hover:bg-blue-600">Edit</RouterLink>
+
+                    <button @click="remove(p.id)" class="inline-block bg-red-500 px-3 py-2 rounded cursor-pointer hover:bg-red-600">Delete</button>
+                </div>
+
             </li>
         </ul>
-    </div>
-    <div ref="mapEl" class="h-96"></div>
+
+</div>
+
 
 </template>
