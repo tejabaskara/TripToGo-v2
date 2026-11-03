@@ -48,6 +48,30 @@ const breakdown = computed(() => {
   })
 })
 
+// Reviews list: newest first, show 3 until "Show all" is clicked
+const SHOW_FIRST = 3
+const showAll = ref(false)
+const sortedReviews = computed(() =>
+  [...(place.value?.reviews ?? [])].sort(
+    (a, b) => new Date(b.created_at) - new Date(a.created_at) || b.id - a.id
+  )
+)
+const visibleReviews = computed(() =>
+  showAll.value ? sortedReviews.value : sortedReviews.value.slice(0, SHOW_FIRST)
+)
+
+// "2026-11-02T10:00:00Z" -> "2 Nov 2026"
+function formatDate(value) {
+  return new Date(value).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+// Avatar colour picked from the name, so the same person always gets the same colour
+const avatarColors = ['bg-green-100 text-green-800', 'bg-sky-100 text-sky-700', 'bg-amber-100 text-amber-800']
+function avatarColor(name = '') {
+  const sum = [...name].reduce((total, ch) => total + ch.charCodeAt(0), 0)
+  return avatarColors[sum % avatarColors.length]
+}
+
 // Orange map pin, same shape as on the home page
 function pinIcon() {
   return L.divIcon({
@@ -190,15 +214,43 @@ onBeforeUnmount(() => map?.remove())
             </p>
           </section>
 
-          <!-- Reviews list (styled in a later step) -->
+          <!-- Reviews list -->
           <section class="bg-white rounded-2xl shadow-sm p-5 md:p-7">
-            <ul>
-              <li v-for="r in place.reviews" :key="r.id">
-                <strong>{{ r.user.name }}</strong> — {{ r.rating }}/5
-                <p>{{ r.comment }}</p>
-                <small>{{ r.created_at }}</small>
+            <h2 class="text-lg md:text-xl font-bold text-gray-900 mb-5">Reviews ({{ place.reviews_count }})</h2>
+
+            <p v-if="sortedReviews.length === 0" class="text-gray-500">
+              No reviews yet. Be the first to share your experience!
+            </p>
+
+            <ul v-else class="divide-y divide-gray-100">
+              <li v-for="r in visibleReviews" :key="r.id" class="flex gap-3.5 py-5 first:pt-0">
+                <div
+                  class="w-10 h-10 md:w-11 md:h-11 shrink-0 rounded-full flex items-center justify-center font-bold"
+                  :class="avatarColor(r.user?.name)"
+                >
+                  {{ (r.user?.name ?? '?').charAt(0).toUpperCase() }}
+                </div>
+
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center justify-between gap-2">
+                    <span class="font-bold text-gray-900 truncate">{{ r.user?.name ?? 'Unknown' }}</span>
+                    <span class="shrink-0 text-xs md:text-sm text-gray-400">{{ formatDate(r.created_at) }}</span>
+                  </div>
+                  <div class="tracking-wider text-sm" :aria-label="`${r.rating} out of 5 stars`">
+                    <span v-for="n in 5" :key="n" :class="n <= r.rating ? 'text-amber-500' : 'text-gray-300'">★</span>
+                  </div>
+                  <p class="mt-1 text-gray-600 leading-relaxed whitespace-pre-line break-words">{{ r.comment }}</p>
+                </div>
               </li>
             </ul>
+
+            <button
+              v-if="sortedReviews.length > SHOW_FIRST"
+              @click="showAll = !showAll"
+              class="w-full mt-2 bg-green-50 hover:bg-green-100 text-green-800 font-semibold text-sm rounded-xl py-3 cursor-pointer"
+            >
+              {{ showAll ? 'Show less' : `Show all ${sortedReviews.length} reviews` }}
+            </button>
           </section>
         </div>
 
