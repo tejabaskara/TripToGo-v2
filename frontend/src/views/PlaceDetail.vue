@@ -6,7 +6,7 @@ import 'leaflet/dist/leaflet.css'
 import { useRoute } from 'vue-router'
 import { useAuth } from '../composables/useAuth'
 
-const { isLoggedIn } = useAuth()
+const { isLoggedIn, user } = useAuth()
 const route = useRoute()
 
 const mapEl = ref(null)
@@ -47,6 +47,15 @@ const breakdown = computed(() => {
     return { stars, count, percent }
   })
 })
+
+// Star picker: the star under the mouse lights up before you click
+const hoverRating = ref(0)
+const ratingLabels = ['', 'Bad', 'Not great', 'Okay', 'Good', 'Amazing']
+
+// The logged-in user's own review of this place (each user can post only one)
+const myReview = computed(() =>
+  place.value?.reviews?.find(r => user.value && r.user_id === user.value.id)
+)
 
 // Reviews list: newest first, show 3 until "Show all" is clicked
 const SHOW_FIRST = 3
@@ -198,21 +207,82 @@ onBeforeUnmount(() => map?.remove())
             <p class="text-gray-600 leading-relaxed whitespace-pre-line">{{ place.description }}</p>
           </section>
 
-          <!-- Review form (styled in a later step) -->
-          <section class="bg-white rounded-2xl shadow-sm p-5 md:p-7">
-            <form v-if="isLoggedIn" @submit.prevent="submitReview">
-              <select v-model="rating">
-                <option v-for="n in 5" :key="n" :value="n">{{ n }}</option>
-              </select>
-              <textarea v-model="comment" placeholder="Your review"></textarea>
-              <p v-if="formError.comment">{{ formError.comment[0] }}</p>
-              <p v-if="formError.rating">{{ formError.rating[0] }}</p>
-              <button :disabled="submmiting">Post Review</button>
-            </form>
-            <p v-else>
-              <RouterLink to="/login">Login</RouterLink> to leave review
-            </p>
+          <!-- Logged out: ask to log in -->
+          <section
+            v-if="!isLoggedIn"
+            class="bg-green-50 border border-green-200 rounded-2xl p-5 md:p-6 flex flex-col items-center gap-3 text-center"
+          >
+            <p class="font-semibold text-green-800">Been here? Share your experience.</p>
+            <RouterLink
+              to="/login"
+              class="bg-green-800 hover:bg-green-900 text-white font-semibold text-sm rounded-full px-6 py-2.5"
+            >
+              Login to write a review
+            </RouterLink>
           </section>
+
+          <!-- Logged in and already reviewed this place -->
+          <section
+            v-else-if="myReview"
+            class="bg-green-50 border border-green-200 rounded-2xl p-5 md:p-6 flex items-center gap-3"
+          >
+            <span class="text-2xl">✓</span>
+            <div>
+              <p class="font-semibold text-green-800">You already reviewed this place.</p>
+              <p class="text-sm text-gray-600">
+                You gave it
+                <span class="text-amber-500 tracking-wider">{{ '★'.repeat(myReview.rating) }}</span>
+                — thank you!
+              </p>
+            </div>
+          </section>
+
+          <!-- Logged in: write a review -->
+          <form
+            v-else
+            @submit.prevent="submitReview"
+            class="bg-white rounded-2xl shadow-sm p-5 md:p-7 flex flex-col gap-4"
+          >
+            <h2 class="text-lg md:text-xl font-bold text-gray-900">Write a review</h2>
+
+            <!-- Star picker -->
+            <div class="flex items-center gap-1" @mouseleave="hoverRating = 0">
+              <button
+                v-for="n in 5"
+                :key="n"
+                type="button"
+                @click="rating = n"
+                @mouseenter="hoverRating = n"
+                class="text-3xl leading-none cursor-pointer transition-transform hover:scale-110"
+                :class="n <= (hoverRating || rating) ? 'text-amber-500' : 'text-gray-300'"
+                :aria-label="`${n} star${n === 1 ? '' : 's'}`"
+              >★</button>
+              <span class="ml-3 text-sm text-gray-500">
+                {{ hoverRating || rating }} out of 5 · {{ ratingLabels[hoverRating || rating] }}
+              </span>
+            </div>
+            <p v-if="formError.rating" class="text-sm text-red-600 -mt-2">{{ formError.rating[0] }}</p>
+
+            <textarea
+              v-model="comment"
+              rows="4"
+              placeholder="Tell other travellers what you liked..."
+              class="w-full bg-gray-50 border rounded-xl p-3.5 outline-none focus:bg-white focus:border-green-700 resize-y"
+              :class="formError.comment ? 'border-red-400' : 'border-gray-300'"
+            ></textarea>
+            <p v-if="formError.comment" class="text-sm text-red-600 -mt-2">{{ formError.comment[0] }}</p>
+
+            <div class="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3">
+              <p class="text-sm text-gray-500">You can post one review per place.</p>
+              <button
+                type="submit"
+                :disabled="submmiting || !comment.trim()"
+                class="bg-green-800 hover:bg-green-900 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-full px-6 py-3 cursor-pointer"
+              >
+                {{ submmiting ? 'Posting...' : 'Post review' }}
+              </button>
+            </div>
+          </form>
 
           <!-- Reviews list -->
           <section class="bg-white rounded-2xl shadow-sm p-5 md:p-7">
