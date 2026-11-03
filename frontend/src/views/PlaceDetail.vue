@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import api from '../api'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -32,6 +32,36 @@ function styleFor(cat) {
   return categoryStyle[cat] ?? defaultStyle
 }
 
+// Average rating as a number (or null when there are no reviews)
+const average = computed(() => {
+  const avg = place.value?.reviews_avg_rating
+  return avg ? Number(avg) : null
+})
+
+// How many reviews gave 5, 4, 3, 2 and 1 stars
+const breakdown = computed(() => {
+  const reviews = place.value?.reviews ?? []
+  return [5, 4, 3, 2, 1].map(stars => {
+    const count = reviews.filter(r => r.rating === stars).length
+    const percent = reviews.length ? (count / reviews.length) * 100 : 0
+    return { stars, count, percent }
+  })
+})
+
+// Orange map pin, same shape as on the home page
+function pinIcon() {
+  return L.divIcon({
+    className: '',
+    iconSize: [40, 54],
+    iconAnchor: [20, 54],
+    html: `<svg width="40" height="54" viewBox="-2 -2 32 42" style="filter: drop-shadow(0 2px 3px rgba(0,0,0,.3))">
+      <path d="M14 0C6.3 0 0 6.3 0 14c0 10.5 14 24 14 24s14-13.5 14-24C28 6.3 21.7 0 14 0z"
+        fill="#EA580C" stroke="#fff" stroke-width="2.5"/>
+      <circle cx="14" cy="14" r="5" fill="#fff"/>
+    </svg>`,
+  })
+}
+
 async function fetchDetailPlace() {
   loading.value = true
   error.value = null
@@ -49,11 +79,12 @@ function initMap() {
   if (!place.value || !mapEl.value) return
   const p = place.value
   map?.remove()
-  map = L.map(mapEl.value).setView([p.latitude, p.longitude], 14)
+  // scrollWheelZoom off: scrolling the page should not zoom the small map
+  map = L.map(mapEl.value, { scrollWheelZoom: false }).setView([p.latitude, p.longitude], 15)
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors',
   }).addTo(map)
-  L.marker([p.latitude, p.longitude]).addTo(map).bindPopup(`<b>${p.name}</b>`)
+  L.marker([p.latitude, p.longitude], { icon: pinIcon() }).addTo(map)
 }
 
 async function load() {
@@ -161,10 +192,6 @@ onBeforeUnmount(() => map?.remove())
 
           <!-- Reviews list (styled in a later step) -->
           <section class="bg-white rounded-2xl shadow-sm p-5 md:p-7">
-            <p>
-              {{ place.reviews_avg_rating ? Number(place.reviews_avg_rating).toFixed(1) : 'No ratings' }}
-              ({{ place.reviews_count }} reviews)
-            </p>
             <ul>
               <li v-for="r in place.reviews" :key="r.id">
                 <strong>{{ r.user.name }}</strong> — {{ r.rating }}/5
@@ -177,9 +204,46 @@ onBeforeUnmount(() => map?.remove())
 
         <!-- Right column -->
         <div class="flex flex-col gap-6">
-          <!-- Map (turned into the location card in a later step) -->
+          <!-- Rating summary -->
           <section class="bg-white rounded-2xl shadow-sm p-5 md:p-6">
-            <div ref="mapEl" class="h-64 rounded-xl overflow-hidden z-0"></div>
+            <div class="flex items-center gap-4 mb-4">
+              <span class="text-5xl font-bold text-gray-900">{{ average ? average.toFixed(1) : '–' }}</span>
+              <div>
+                <div class="text-xl tracking-wider">
+                  <span
+                    v-for="n in 5"
+                    :key="n"
+                    :class="average && n <= Math.round(average) ? 'text-amber-500' : 'text-gray-300'"
+                  >★</span>
+                </div>
+                <p class="text-sm text-gray-500">
+                  {{ place.reviews_count ? `Based on ${place.reviews_count} review${place.reviews_count === 1 ? '' : 's'}` : 'No reviews yet' }}
+                </p>
+              </div>
+            </div>
+
+            <div class="flex flex-col gap-2">
+              <div v-for="row in breakdown" :key="row.stars" class="flex items-center gap-3 text-sm">
+                <span class="w-7 shrink-0 text-gray-700">{{ row.stars }} ★</span>
+                <div class="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div class="h-full bg-amber-500 rounded-full" :style="{ width: row.percent + '%' }"></div>
+                </div>
+                <span class="w-6 shrink-0 text-right text-gray-500">{{ row.count }}</span>
+              </div>
+            </div>
+          </section>
+
+          <!-- Location -->
+          <section class="bg-white rounded-2xl shadow-sm p-5 md:p-6 flex flex-col gap-4">
+            <h2 class="text-lg md:text-xl font-bold text-gray-900">Location</h2>
+            <div ref="mapEl" class="h-52 rounded-xl overflow-hidden z-0"></div>
+            <p v-if="place.address" class="text-sm text-gray-600 leading-relaxed">{{ place.address }}</p>
+            <RouterLink
+              :to="{ path: '/', query: { place: place.id } }"
+              class="text-center border-[1.5px] border-green-800 text-green-800 font-semibold text-sm rounded-full py-3 hover:bg-green-50"
+            >
+              Show on big map
+            </RouterLink>
           </section>
         </div>
       </div>

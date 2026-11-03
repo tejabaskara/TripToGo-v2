@@ -1,11 +1,12 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import api from '../api'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
 const router = useRouter()
+const route = useRoute()
 
 const mapEl = ref(null)
 const cardRow = ref(null)
@@ -119,16 +120,26 @@ async function select(p, { fromPin = false } = {}) {
   if (!marker) return
   marker.setIcon(pinIcon(true))
 
-  if (fromPin) {
-    // Pin clicked: scroll its card into view
-    await nextTick()
-    document.getElementById(`place-card-${p.id}`)
-      ?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
-  } else {
-    // Card clicked: move the map to the pin and open its popup
+  if (!fromPin) {
+    // Card clicked (or opened from a link): move the map to the pin and open its popup
     map.flyTo(marker.getLatLng(), Math.max(map.getZoom(), 13), { duration: 0.6 })
     marker.openPopup()
   }
+
+  // Scroll the matching card into view
+  await nextTick()
+  document.getElementById(`place-card-${p.id}`)
+    ?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
+}
+
+// "Show on big map" on the detail page links to /?place=<id>.
+// After the first load, select that place so its pin is opened.
+async function selectFromUrl() {
+  const wanted = Number(route.query.place)
+  if (!wanted) return
+  await nextTick() // wait until the pins and cards exist
+  const p = places.value.find(p => p.id === wanted)
+  if (p) select(p)
 }
 
 function scrollCards() {
@@ -141,7 +152,7 @@ onMounted(() => {
     attribution: '&copy; OpenStreetMap contributors',
   }).addTo(map)
   L.control.zoom({ position: 'topright' }).addTo(map)
-  fetchPlaces()
+  fetchPlaces().then(selectFromUrl)
 })
 
 onBeforeUnmount(() => {
