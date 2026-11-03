@@ -1,10 +1,18 @@
 <script setup>
 import { ref } from 'vue';
 import { useAuth } from '../composables/useAuth'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 
 const router = useRouter()
+const route = useRoute()
 const { register } = useAuth()
+
+
+const redirect = typeof route.query.redirect === 'string'
+  && route.query.redirect.startsWith('/')
+  && !route.query.redirect.startsWith('//')
+  ? route.query.redirect
+  : '/'
 
 const name = ref('')
 const email = ref('')
@@ -19,7 +27,7 @@ async function submit() {
   formError.value = {}
   try {
     await register(name.value, email.value, password.value)
-    router.push('/')
+    router.push(redirect)
   } catch (e) {
     if (e.response) {
         formError.value = e.response?.data?.errors ?? {}
@@ -60,7 +68,7 @@ async function submit() {
                         </div>
             <p v-if="error" class="text-red-600">{{error}}</p>
             <p v-if="formError.email">{{ formError.email[0] }}</p>
-             <RouterLink to="/login" class="text-gray-700 text-right">Have an account?</RouterLink>
+             <RouterLink :to="{ path: '/login', query: route.query }" class="text-gray-700 text-right">Have an account?</RouterLink>
             <button :disabled="submitting" class="bg-green-800 text-white font-bold rounded py-2 disabled:opacity-50">Register</button>
         </form>
     </div>

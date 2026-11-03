@@ -214,7 +214,7 @@ onBeforeUnmount(() => map?.remove())
           >
             <p class="font-semibold text-green-800">Been here? Share your experience.</p>
             <RouterLink
-              to="/login"
+              :to="{ path: '/login', query: { redirect: route.fullPath } }"
               class="bg-green-800 hover:bg-green-900 text-white font-semibold text-sm rounded-full px-6 py-2.5"
             >
               Login to write a review

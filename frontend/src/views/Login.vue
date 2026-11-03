@@ -1,10 +1,19 @@
 <script setup>
 import { ref, Text } from 'vue';
 import { useAuth } from '../composables/useAuth'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 
 const router = useRouter()
+const route = useRoute()
 const { login } = useAuth()
+
+// Page to go back to after login, e.g. /login?redirect=/places/5.
+// Only paths inside this site are allowed ("/..." but not "//other-site.com").
+const redirect = typeof route.query.redirect === 'string'
+  && route.query.redirect.startsWith('/')
+  && !route.query.redirect.startsWith('//')
+  ? route.query.redirect
+  : '/'
 
 const email = ref('')
 const password = ref('')
@@ -20,7 +29,7 @@ async function submit() {
 
   try {
     await login(email.value, password.value)
-    router.push('/')
+    router.push(redirect)
   } catch (e) {
     if (e.response) {
       formError.value = e.response?.data?.errors ?? {}
@@ -60,7 +69,7 @@ async function submit() {
             </div>
             <p v-if="formError.email" class="text-red-600">{{ formError.email[0] }}</p>
             <p v-if="error" class="text-red-600">{{error}}</p>
-            <RouterLink to="/register" class="text-gray-700 text-right">Don't have account?</RouterLink>
+            <RouterLink :to="{ path: '/register', query: route.query }" class="text-gray-700 text-right">Don't have account?</RouterLink>
             <button :disabled="submitting" class="bg-green-800 text-white font-bold rounded py-2 disabled:opacity-50">Login</button>
         </form>
     </div>
