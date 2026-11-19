@@ -1,5 +1,6 @@
 <script setup>
 import { onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import api from '../api'
 import { styleFor, ratingText } from '../placeStyle'
 
@@ -47,18 +48,51 @@ function goToPage(n) {
   fetchPlaces()
 }
 
-async function remove(id) {
-  if (!window.confirm('Delete this place ?')) return
+// Delete popup: toDelete is the place the popup asks about (null = popup closed)
+const toDelete = ref(null)
+const deleting = ref(false)
+const deleteError = ref('')
+
+function askDelete(p) {
+  toDelete.value = p
+  deleteError.value = ''
+}
+
+function closeDelete() {
+  if (deleting.value) return
+  toDelete.value = null
+}
+
+async function confirmDelete() {
+  deleting.value = true
+  deleteError.value = ''
   try {
-    await api.delete(`/places/${id}`)
-    places.value = places.value.filter(p => p.id !== id)
+    await api.delete(`/places/${toDelete.value.id}`)
+    toDelete.value = null
+    // The last place on this page is gone: go back one page
+    if (places.value.length === 1 && page.value > 1) page.value--
+    // Load again so the count and paging are right
+    await fetchPlaces()
   } catch (e) {
-    error.value = 'Could not delete the place.'
+    deleteError.value = 'Could not delete the place.'
+  } finally {
+    deleting.value = false
   }
 }
 
+// "Place saved" message: the form sends us to /admin/places?saved=1
+const route = useRoute()
+const router = useRouter()
+const saved = ref(false)
+
 onMounted(() => {
   fetchPlaces()
+
+  if (route.query.saved) {
+    saved.value = true
+    router.replace({ query: {} }) // remove ?saved so a page refresh doesn't show it again
+    setTimeout(() => (saved.value = false), 3000)
+  }
 })
 
 // New search or filter: wait until typing stops, then start again from page 1
@@ -174,7 +208,7 @@ watch([search, category], () => {
                       Edit
                     </RouterLink>
                     <button
-                      @click="remove(p.id)"
+                      @click="askDelete(p)"
                       class="text-sm font-semibold text-red-600 border-[1.5px] border-red-300 rounded-full px-4 py-1.5 cursor-pointer hover:bg-red-50"
                     >
                       Delete
@@ -212,7 +246,7 @@ watch([search, category], () => {
                 Edit
               </RouterLink>
               <button
-                @click="remove(p.id)"
+                @click="askDelete(p)"
                 class="flex-1 text-sm font-semibold text-red-600 border-[1.5px] border-red-300 rounded-full py-2 cursor-pointer"
               >
                 Delete
@@ -244,5 +278,55 @@ watch([search, category], () => {
         </div>
       </template>
     </div>
+
+    <!-- Delete popup -->
+    <div
+      v-if="toDelete"
+      @click.self="closeDelete"
+      class="fixed inset-0 z-[2000] bg-gray-900/45 flex items-center justify-center px-4"
+    >
+      <div class="w-full max-w-md bg-white rounded-2xl shadow-2xl p-7 flex flex-col gap-3">
+        <div class="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center text-2xl font-bold">!</div>
+        <h2 class="text-xl font-bold text-gray-900">Delete {{ toDelete.name }}?</h2>
+        <p class="text-gray-600 leading-relaxed">
+          <template v-if="toDelete.reviews_count">
+            This also removes its {{ toDelete.reviews_count }} review{{ toDelete.reviews_count === 1 ? '' : 's' }}.
+          </template>
+          This cannot be undone.
+        </p>
+        <p v-if="deleteError" class="text-sm font-semibold text-red-600">{{ deleteError }}</p>
+        <div class="flex justify-end gap-2.5 pt-2">
+          <button
+            @click="closeDelete"
+            :disabled="deleting"
+            class="font-semibold text-gray-700 border-[1.5px] border-gray-300 rounded-full px-5 py-2.5 cursor-pointer disabled:opacity-60"
+          >
+            Cancel
+          </button>
+          <button
+            @click="confirmDelete"
+            :disabled="deleting"
+            class="font-semibold text-white bg-red-600 rounded-full px-5 py-2.5 cursor-pointer hover:bg-red-700 disabled:opacity-60"
+          >
+            {{ deleting ? 'Deleting...' : 'Yes, delete' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- "Place saved" message -->
+    <Transition
+      enter-from-class="opacity-0 translate-y-3"
+      leave-to-class="opacity-0 translate-y-3"
+      enter-active-class="transition duration-300"
+      leave-active-class="transition duration-300"
+    >
+      <div
+        v-if="saved"
+        class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[2000] bg-green-50 border-[1.5px] border-green-300 text-green-800 font-semibold rounded-full shadow-lg px-5 py-3"
+      >
+        ✓ Place saved
+      </div>
+    </Transition>
   </div>
 </template>

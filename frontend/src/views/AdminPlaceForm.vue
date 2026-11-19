@@ -64,7 +64,7 @@ async function submit() {
     } else {
       await api.post(`/places`, body)
     }
-    router.push('/admin/places')
+    router.push('/admin/places?saved=1')
   } catch (e) {
     if (e.response) {
       formError.value = e.response.data.errors ?? {}
