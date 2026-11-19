@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, onBeforeUnmount, watch, ref, nextTick } from 'vue'
+import { onMounted, onBeforeUnmount, watch, ref, computed, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '../api'
 import L from 'leaflet'
@@ -29,6 +29,61 @@ const imageBroken = ref(false) // the image link could not be shown
 const mapEl = ref(null)
 let map
 let marker
+
+// ---- Photo upload ----
+const MAX_SIZE = 2 * 1024 * 1024 // 2 MB, same limit as the server
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+
+const fileInput = ref(null)     // the hidden <input type="file">
+const photoFile = ref(null)     // the chosen File, or null
+const photoUrl = ref('')        // temporary browser address to show the chosen file
+const photoError = ref('')
+const dragging = ref(false)     // a file is being dragged over the box
+
+function choosePhoto(file) {
+  photoError.value = ''
+  if (!file) return
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    photoError.value = 'Please choose a JPG, PNG or WEBP picture.'
+    return
+  }
+  if (file.size > MAX_SIZE) {
+    photoError.value = 'This photo is bigger than 2 MB.'
+    return
+  }
+  removePhoto()
+  photoFile.value = file
+  photoUrl.value = URL.createObjectURL(file)
+}
+
+function onFileChange(e) {
+  choosePhoto(e.target.files[0])
+  e.target.value = '' // so choosing the same file again still works
+}
+
+function onDrop(e) {
+  dragging.value = false
+  choosePhoto(e.dataTransfer.files[0])
+}
+
+function removePhoto() {
+  if (photoUrl.value) URL.revokeObjectURL(photoUrl.value) // free the memory
+  photoFile.value = null
+  photoUrl.value = ''
+}
+
+// 1234567 -> "1.2 MB", 45678 -> "45 KB"
+function formatSize(bytes) {
+  return bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.round(bytes / 1024)} KB`
+}
+
+// What the preview shows: the chosen file first, else the link
+const previewSrc = computed(() => photoUrl.value || (image.value && !imageBroken.value ? image.value : ''))
+
+// The preview could not be shown: only a pasted link can be broken
+function onPreviewError() {
+  if (!photoUrl.value) imageBroken.value = true
+}
 
 // Input style: red border when the server sent an error for this field
 function inputClass(field) {
@@ -69,7 +124,17 @@ async function submit() {
     image: image.value,
   }
   try {
-    if (isEdit) {
+    if (photoFile.value) {
+      // A file can't go inside JSON, so send everything as FormData
+      const form = new FormData()
+      for (const [key, value] of Object.entries(body)) {
+        form.append(key, value ?? '')
+      }
+      form.append('photo', photoFile.value)
+      // Browsers can't send files with PUT: send POST and tell Laravel it is a PUT
+      if (isEdit) form.append('_method', 'PUT')
+      await api.post(isEdit ? `/places/${id}` : '/places', form)
+    } else if (isEdit) {
       await api.put(`/places/${id}`, body)
     } else {
       await api.post(`/places`, body)
@@ -137,6 +202,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   if (map) map.remove()
+  removePhoto()
 })
 </script>
 
@@ -233,33 +299,71 @@ onBeforeUnmount(() => {
           </label>
 
           <div class="flex flex-col gap-1.5">
-            <label class="flex flex-col gap-1.5">
-              <span class="text-sm font-semibold text-gray-700">Image URL</span>
-              <input
-                v-model="image"
-                placeholder="https://..."
-                class="rounded-xl border px-3.5 py-3 outline-none focus:ring-4 placeholder:text-gray-400"
-                :class="inputClass('image')"
-              />
-            </label>
+            <span class="text-sm font-semibold text-gray-700">Photo</span>
+
+            <!-- Upload box: click or drop a file on it -->
+            <input ref="fileInput" type="file" accept="image/jpeg,image/png,image/webp" class="hidden" @change="onFileChange" />
+            <button
+              type="button"
+              @click="fileInput.click()"
+              @dragover.prevent="dragging = true"
+              @dragleave.prevent="dragging = false"
+              @drop.prevent="onDrop"
+              class="rounded-xl border-[1.5px] border-dashed px-4 py-5 flex flex-col items-center gap-1.5 cursor-pointer transition"
+              :class="dragging ? 'border-green-700 bg-green-100' : formError.photo || photoError ? 'border-red-400 bg-red-50' : 'border-green-300 bg-green-50 hover:bg-green-100'"
+            >
+              <span class="w-10 h-10 rounded-full bg-green-100 text-green-800 flex items-center justify-center text-xl font-bold">↑</span>
+              <span class="text-sm font-semibold text-green-800">
+                {{ dragging ? 'Drop the photo here' : 'Drag a photo here, or click to browse' }}
+              </span>
+              <span class="text-xs text-gray-500">JPG, PNG or WEBP · max 2 MB</span>
+            </button>
+            <span v-if="photoError" class="text-sm text-red-600">{{ photoError }}</span>
+            <span v-if="formError.photo" class="text-sm text-red-600">{{ formError.photo[0] }}</span>
+
+            <!-- The chosen file -->
+            <div v-if="photoFile" class="flex items-center gap-2.5 rounded-xl border border-gray-200 bg-gray-50 pl-2.5 pr-3.5 py-2.5">
+              <img :src="photoUrl" alt="" class="w-9 h-9 rounded-lg object-cover shrink-0" />
+              <span class="flex-1 min-w-0 truncate text-sm font-semibold text-gray-900">
+                {{ photoFile.name }} · {{ formatSize(photoFile.size) }}
+              </span>
+              <button type="button" @click="removePhoto" class="text-sm font-semibold text-red-600 cursor-pointer hover:underline">
+                Remove
+              </button>
+            </div>
+
+            <!-- ...or a link -->
+            <div class="flex items-center gap-3 py-1">
+              <span class="flex-1 h-px bg-gray-200"></span>
+              <span class="text-xs font-semibold text-gray-400">or paste an image link</span>
+              <span class="flex-1 h-px bg-gray-200"></span>
+            </div>
+            <input
+              v-model="image"
+              placeholder="https://..."
+              aria-label="Image URL"
+              class="rounded-xl border px-3.5 py-3 outline-none focus:ring-4 placeholder:text-gray-400"
+              :class="inputClass('image')"
+            />
             <span v-if="formError.image" class="text-sm text-red-600">{{ formError.image[0] }}</span>
 
             <!-- Preview -->
             <div class="relative mt-1 h-40 rounded-xl overflow-hidden">
               <img
-                v-if="image && !imageBroken"
-                :src="image"
+                v-if="previewSrc"
+                :src="previewSrc"
                 alt="Preview"
-                @error="imageBroken = true"
+                @error="onPreviewError"
                 class="w-full h-full object-cover"
               />
               <div v-else class="w-full h-full rounded-xl bg-gray-100 border-[1.5px] border-dashed border-gray-300 flex items-center justify-center">
                 <span class="text-sm text-gray-500">{{ image ? 'Could not load this image' : 'No image yet' }}</span>
               </div>
-              <span v-if="image && !imageBroken" class="absolute left-2.5 bottom-2.5 bg-white/90 rounded-full px-2.5 py-0.5 text-xs font-semibold text-gray-700">
-                Preview
+              <span v-if="previewSrc" class="absolute left-2.5 bottom-2.5 bg-white/90 rounded-full px-2.5 py-0.5 text-xs font-semibold text-gray-700">
+                {{ photoUrl ? 'Preview · uploaded photo' : 'Preview · image link' }}
               </span>
             </div>
+            <span class="text-xs text-gray-500">If you add both, the uploaded photo is used.</span>
           </div>
         </div>
 
