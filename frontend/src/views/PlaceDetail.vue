@@ -5,6 +5,7 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { useRoute } from 'vue-router'
 import { useAuth } from '../composables/useAuth'
+import { styleFor, pinIcon } from '../placeStyle'
 
 const { isLoggedIn, user } = useAuth()
 const route = useRoute()
@@ -20,17 +21,6 @@ const rating = ref(5)
 const comment = ref('')
 const formError = ref({})
 const submmiting = ref(false)
-
-// Colours for each category (chip + photo placeholder), same as the home page
-const categoryStyle = {
-  beach: { chip: 'bg-sky-100 text-sky-700', photo: 'from-sky-300 to-sky-600' },
-  mountain: { chip: 'bg-green-100 text-green-800', photo: 'from-green-200 to-green-700' },
-  museum: { chip: 'bg-amber-100 text-amber-800', photo: 'from-amber-200 to-amber-600' },
-}
-const defaultStyle = { chip: 'bg-gray-100 text-gray-700', photo: 'from-gray-200 to-gray-500' }
-function styleFor(cat) {
-  return categoryStyle[cat] ?? defaultStyle
-}
 
 // Average rating as a number (or null when there are no reviews)
 const average = computed(() => {
@@ -81,20 +71,6 @@ function avatarColor(name = '') {
   return avatarColors[sum % avatarColors.length]
 }
 
-// Orange map pin, same shape as on the home page
-function pinIcon() {
-  return L.divIcon({
-    className: '',
-    iconSize: [40, 54],
-    iconAnchor: [20, 54],
-    html: `<svg width="40" height="54" viewBox="-2 -2 32 42" style="filter: drop-shadow(0 2px 3px rgba(0,0,0,.3))">
-      <path d="M14 0C6.3 0 0 6.3 0 14c0 10.5 14 24 14 24s14-13.5 14-24C28 6.3 21.7 0 14 0z"
-        fill="#EA580C" stroke="#fff" stroke-width="2.5"/>
-      <circle cx="14" cy="14" r="5" fill="#fff"/>
-    </svg>`,
-  })
-}
-
 async function fetchDetailPlace() {
   loading.value = true
   error.value = null
@@ -117,7 +93,7 @@ function initMap() {
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors',
   }).addTo(map)
-  L.marker([p.latitude, p.longitude], { icon: pinIcon() }).addTo(map)
+  L.marker([p.latitude, p.longitude], { icon: pinIcon(true) }).addTo(map)
 }
 
 async function load() {
