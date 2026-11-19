@@ -14,7 +14,10 @@ class Review extends Model
 
     protected function casts(): array
     {
-        return ['rating' => 'integer'];
+        return [
+            'rating' => 'integer',
+            'user_id' => 'integer',
+        ];
     }
 
     public function place(): BelongsTo

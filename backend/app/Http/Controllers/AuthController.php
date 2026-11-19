@@ -10,10 +10,12 @@ use Illuminate\Validation\ValidationException;
 class AuthController extends Controller
 {
     public function register(Request $request){
+        $this->normalizeEmail($request);
+
         $validated = $request->validate([
-            'name' =>['required', 'string'],
-            'email' => ['required', 'email', 'unique:users'],
-            'password' => ['required', 'string', 'min:8']
+            'name' =>['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', 'unique:users'],
+            'password' => ['required', 'string', 'min:8', 'max:255']
         ]);
 
         $user = User::create($validated);
@@ -25,6 +27,8 @@ class AuthController extends Controller
     }
 
     public function login(Request $request){
+        $this->normalizeEmail($request);
+
         $validated = $request->validate([
             'email' => ['required', 'email'],
             'password' => ['required', 'string'],
@@ -53,6 +57,17 @@ class AuthController extends Controller
 
     public function me(Request $request){
         return $request->user();
+    }
+
+    /**
+     * "Test@Example.com " and "test@example.com" should be the same account,
+     * so trim spaces and lowercase the email before we use it.
+     */
+    private function normalizeEmail(Request $request): void
+    {
+        if (is_string($request->input('email'))) {
+            $request->merge(['email' => strtolower(trim($request->input('email')))]);
+        }
     }
 
 }

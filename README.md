@@ -51,8 +51,9 @@ npm run dev
 VITE_API_URL=http://localhost:8000/api
 ```
 
-The seeder creates an admin login (`test@example.com` / `password`) and 10
-random places, so the app has data to browse right after `migrate --seed`.
+The seeder creates 10 random places, so the app has data to browse right after
+`migrate --seed`. In local mode (`APP_ENV=local`) it also creates a test admin
+account — see `backend/database/seeders/DatabaseSeeder.php`.
 
 ## API endpoints
 

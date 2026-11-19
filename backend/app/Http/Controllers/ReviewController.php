@@ -16,7 +16,8 @@ class ReviewController extends Controller
      */
     public function index(Place $place)
     {
-        return $place->reviews()->with('user')->latest()->paginate(15);
+        // Only send the reviewer's id and name - never their email or is_admin
+        return $place->reviews()->with('user:id,name')->latest()->paginate(15);
     }
 
     /**
@@ -26,7 +27,7 @@ class ReviewController extends Controller
     {
         $validated = $request->validate([
             'rating' => ['required', 'integer', 'between:1,5'],
-            'comment' => ['required', 'string'],
+            'comment' => ['required', 'string', 'max:2000'],
         ]);
 
         $alreadyReviewed = $place->reviews()
@@ -46,7 +47,7 @@ class ReviewController extends Controller
             'user_id' => $request->user()->id,
         ]);
 
-        return response()->json($review->load('user'), 201);
+        return response()->json($review->load('user:id,name'), 201);
     }
 
     /**
@@ -58,12 +59,12 @@ class ReviewController extends Controller
 
         $validated = $request->validate([
             'rating' => ['required', 'integer', 'between:1,5'],
-            'comment' => ['required', 'string'],
+            'comment' => ['required', 'string', 'max:2000'],
         ]);
 
         $review->update($validated);
 
-        return $review->load('user');
+        return $review->load('user:id,name');
     }
 
     /**

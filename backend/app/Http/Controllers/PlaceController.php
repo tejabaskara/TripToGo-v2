@@ -47,7 +47,8 @@ class PlaceController extends Controller
      */
     public function show(Place $place)
     {
-        $place->load('reviews.user');
+        // Only send the reviewer's id and name - never their email or is_admin
+        $place->load('reviews.user:id,name');
         $place->loadCount('reviews');
         $place->loadAvg('reviews', 'rating');
 
@@ -75,8 +76,11 @@ class PlaceController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Place $place)
+    public function destroy(Request $request, Place $place)
     {
+        // Second safety layer: the 'admin' middleware already checks this
+        abort_unless($request->user()?->is_admin, 403);
+
         $place->delete();
         $this->deleteUploadedPhoto($place->image);
 

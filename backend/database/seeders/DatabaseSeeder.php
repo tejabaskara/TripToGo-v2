@@ -18,12 +18,16 @@ class DatabaseSeeder extends Seeder
     {
         // User::factory(10)->create();
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-            'password' => 'password',
-            'is_admin'=> true,
-        ]);
+        // Test admin with a well-known password: ONLY on your own computer / in tests,
+        // never on the real server.
+        if (app()->environment('local', 'testing')) {
+            User::factory()->create([
+                'name' => 'Test User',
+                'email' => 'test@example.com',
+                'password' => 'password',
+                'is_admin'=> true,
+            ]);
+        }
 
         Place::factory(10)->create();
     }
