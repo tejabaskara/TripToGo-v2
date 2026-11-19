@@ -29,7 +29,10 @@ class StorePlaceRequest extends FormRequest
                 'longitude' => ['required', 'numeric', 'between:-180,180'],
                 'address' => ['nullable', 'string'],
                 'category' => ['nullable', 'string'],
-                'image' => ['nullable', 'string'],
+                // A link to a picture on the web...
+                'image' => ['nullable', 'url', 'max:255'],
+                // ...or an uploaded photo file (jpg / png / webp, at most 2 MB = 2048 KB)
+                'photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
             ];
     }
 }
